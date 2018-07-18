@@ -19,8 +19,10 @@ from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
 
-app = dash.Dash()
+app = dash.Dash(__name__)
+server = app.server
 
+app.config.suppress_callback_exceptions = True
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 # ---------------
@@ -113,16 +115,74 @@ def calc_stat(x,y,stat):
 # ---------------
 app.layout = html.Div([
 
+		dcc.Location(id='url', refresh=False),
+		html.Div(id='page-content'),
+		
+	])
+
+about_layout = html.Div([
+		
+		html.Div([
 		# site heading div
 		html.Div([
-			html.H1('Geoclustering Detrital Zircon Samples',
-				style={
-					'position': 'relative',
-					'display': 'inline',
-					'font-size': '7rem',
-					'color': '#4D637F',
-				}),
-		], className='row twelve columnns',style={'textAlign':'center','margin':'20px 0px'}),
+			html.A('Geoclustering Detrital Zircon Samples',href='/',
+			style={
+						'position': 'relative',
+						'display': 'inline',
+						'font-size': '7rem',
+						'color': '#4D637F',
+						'text-decoration': 'none',
+					}
+			),			], className='row twelve columnns',style={'textAlign':'center','margin':'20px 0px 40px 0px'}),
+		],style={'align':'center', 'max-width':'1200px', 'margin': '0px auto'}),
+		
+		html.Div([
+			# about text div
+			dcc.Markdown("""
+This web application provides a highly **interactive suite of data analysis tools for sedimentary provenance research**. 
+Detrital geochronology data is aquired to aid intrepretion of provenance in Earth Sciences, from understanding ancient sedimentary routing systems through to modern day drainage basin analysis.
+
+Recent advances in geochronological-dating technologies and correlating decreased  running costs have triggered a new wealth of data in this field. Increasingly quantitative statistical methods are looked too to aid analysis and interpret these datasets.
+
+This application focuses on **multi-sample comparison methods for detrital zircon (U-Pb radiometric age) data**, although similar analysis could be applicable to other geochronlogical data types. Specifically the application is geared towards aiding interpretation of 'geoclusters', identifying spatial relationships based on samples age distributions.
+
+Theory of the methods in this application is briefly described in each section, drawn mainly from literature on use of statistics in provenance analysis. Whilst the methods are founded on well-established statistical principles, it is important to consider these **results do not bare robust statistical significance**. 
+
+Amongst other reasons this is because age analyses are typically under-sampled (when considering statistical significance), geologically and radiometrically biased and can have sizeable measurement uncertainties, none of which are specifically accounted for in this application. 
+
+Further by interactively varying the parameters in the application you quickly gain an appreciation of how different interpretations can arise using different 'statistics'. The application is therefore best used for **quick and effective visualisation of user datasets and exploring natural provenance signatures and geoclusters between samples**.
+
+Theory and code used in this project was built up last year as part of masters thesis whilst studying at the University of Leeds. The web application was first worked on at the [Agile Geoscience Hackathon in Copenhagen (2018)](https://agilescientific.com/blog/2018/6/13/visualize-this), with a special thanks to [Francois Bonneau](https://github.com/francoisbonneau/) and [Filippo Broggini](https://github.com/filippo82) for their contribution towards code in this Dash app. 
+
+Please check out this projects **[Github repository](https://github.com/danstan5/detrital-geoclustering-web-app)** for open-source code and potential future feature contributions to the site.
+
+*For any questions about the application, please freely contact danielstanton5@gmail.com.*
+				"""),
+			
+			#html.Div([
+			#	html.A(
+			#		html.Button('Click to go back to application'),
+			#		href='/'),
+			#	],style={'align':'center','margin': '15px 0px','text-align':'center'}),			
+			
+			],style={'align':'center','text-align':'justify', 'max-width':'900px', 'margin': '0px auto'}),
+
+	])
+
+main_layout = html.Div([
+
+		# site heading div
+		html.Div([
+			html.A('Geoclustering Detrital Zircon Samples',href='/about',
+			style={
+						'position': 'relative',
+						'display': 'inline',
+						'font-size': '7rem',
+						'color': '#4D637F',
+						'text-decoration': 'none',
+					}
+			),
+		], className='row twelve columnns',style={'textAlign':'center','margin':'20px 0px 0px 0px'}),
 
 		# Input data div
 		html.Div([
@@ -141,11 +201,11 @@ Detrital geochronology datasets can be uploaded from a local drive via the uploa
 * Third row: Longitudes
 * Next rows: Ages
 
-An example of this formatted detrital data can be found [here](www.github.com) for reference. Otherwise a test dataset from [Xu et al. (2017)] can be selected below.
+An example of this formatted detrital data can be found [here](https://github.com/danstan5/detrital-geoclustering-web-app/tree/master/data) for reference. Otherwise a test dataset from [Xu et al. (2017)] can be selected below.
 
 [Xu et al. (2017)]: #Xu-2017
 				"""),
-				html.Button('Load Xu et al. 2017 data', id='data-load1', style={'align':'center','margin': '10px auto'}),
+				html.Button('Load Xu et al. 2017 data', id='data-load1', style={'align':'center','margin': '0px 0px 10px 0px'}),
 			]),
 
 			dcc.Upload(
@@ -288,7 +348,7 @@ The KDE-statistics avaliable in this application are:
 (1) **Cross-plot correlation coefficient (R^2)** -  the coefficient indicates similarity from
 a cross-plot of two kernel-distributions against each other ([Saylor et al. 2012]).
 
-(2) **Likeness** - a measure of age-distribution similarities, defined as ‘sameness’ percentage between two combined kernel-distributions ([Satkoski et al. 2013]). Similar to L2-norm suggested by [Sircombe and Hazelton (2004)].
+(2) **Likeness** - a measure of age-distribution similarities, defined as ‘sameness’ percentage between two combined kernel-distributions ([Satkoski et al. 2013]). Similar to the L2-norm statistic suggested by [Sircombe and Hazelton (2004)].
 
 (3) **Similarity** - provides a measure of resemblance between two distributions ([Gehrels 2000]).
 *Note: all methods do require discretisation of a continuous function.*
@@ -479,14 +539,22 @@ Quantified distances between grouped samples are illustrated with dendrograms th
 			], className='row twelve columns',style={'position':'relative'})
 	],
 	# style for the whole site
-	style={'align':'center', 'max-width':'1400px', 'margin': '0px auto'}
-)
-
+	style={'align':'center', 'max-width':'1200px', 'margin': '0px auto'}
+	)
 
 
 # ---------------
 # callbacks
 # ---------------
+@app.callback(dash.dependencies.Output('page-content', 'children'),
+              [dash.dependencies.Input('url', 'pathname')])
+def display_page(pathname):
+    if pathname == '/about':
+        return about_layout
+    else:
+        return main_layout
+
+
 @app.callback(
 	Output('raw-df-json', 'children'),
 			[Input('upload-data', 'contents'),
@@ -499,7 +567,7 @@ def update_any(contents, filename, data_load_clicks):
 			return df.to_json()
 	elif data_load_clicks > 0:
 		try:
-			df = pd.read_csv('data/Xu_et_al_2016_dataset.xlsx')
+			df = pd.read_csv('data/Xu_et_al_2016_dataset.csv')
 			return df.to_json()
 		except:
 			print ('LOCAL UPLOAD FUNCTION DID NOT WORK')
@@ -647,17 +715,20 @@ def update_figure(raw_df_json, diss_df_json, k, linkages):
 
 	if diss_df_json is not None:
 		diss_df = pd.read_json(diss_df_json)
+		diss_df.sort_index(inplace=True)
 		try:
 			X = linkage(squareform(diss_df.values), linkages.lower())
 			m = fcluster(X, k, criterion='maxclust')
-
+		except:
+			print ('Linkage not working')
+		try:
 			# correctly sort the diss_df results to match order of raw_df input
 			df_m = pd.DataFrame(m, index=diss_df.index,columns=['a'])
 			df_m.sort_index(inplace=True)
 			m = df_m['a'].tolist()
 
 			# assign colours for the labels
-			c= ['hsl('+str(h)+',50%'+',50%)' for h in np.linspace(0, 360, k+1)]
+			c = ['hsl('+str(h)+',50%'+',50%)' for h in np.linspace(0, 360, k+1)]
 			c = [c[i] for i in m]
 
 			return {
@@ -769,7 +840,6 @@ def update_figure(selectedData, kdes_df_json):
 			yaxis=dict(title='Density')),
 	}
 
-#app.css.config.serve_locally = True; app.scripts.config.serve_locally = True
 
 if __name__ == '__main__':
 	app.run_server(debug=True)
